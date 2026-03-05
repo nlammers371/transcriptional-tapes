@@ -104,6 +104,13 @@ def simulate_trace(model: PromoterModel, config: SimulationConfig, rng=None) -> 
     fluo_clean = np.zeros(config.seq_length)
     fluo_ms2_clean = np.zeros((n_channels, config.seq_length))
 
+    if custom_kernel is not None:
+        memory_steps = custom_kernel.size
+    else:
+        if config.memory_steps is None or config.alpha is None:
+            raise ValueError("memory_steps and alpha are required when no custom MS2 kernel/pattern is provided")
+        memory_steps = config.memory_steps
+
     for idx, t_end in enumerate(times_unif):
         t_start = max(0.0, t_end - memory_steps * config.delta_t)
         i_start = np.searchsorted(tt, t_start, side="right") - 1
