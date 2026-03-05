@@ -19,3 +19,10 @@ class SimulationConfig:
     unit_size_bp: float | None = None
     ms2_pattern: np.ndarray | None = None
     ms2_kernel: np.ndarray | None = None
+
+    # Multi-channel options
+    n_channels: int = 1
+    cassette_map: np.ndarray | None = None
+    channel_noise_sigma: np.ndarray | None = None
+    channel_snr: np.ndarray | None = None
+    snr_mode: str = "std"

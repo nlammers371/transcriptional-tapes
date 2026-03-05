@@ -11,23 +11,39 @@ def ms2_loading_coeff_integral(alpha: float, w: int, delta_t: float, t1: float, 
 
 
 def kernel_from_pattern(ms2_pattern, normalize: bool = False) -> np.ndarray:
-    """Build a discrete age-kernel from a 0/1 MS2 occupancy pattern along gene bins.
-
-    The i-th kernel bin represents the expected cumulative MS2 contribution during
-    age interval [i*delta_t, (i+1)*delta_t), assuming one gene bin is traversed
-    per acquisition interval.
-    """
+    """Build a discrete age-kernel from a 0/1 occupancy pattern along gene bins."""
     pattern = np.asarray(ms2_pattern, dtype=float)
     if pattern.ndim != 1 or pattern.size == 0:
         raise ValueError("ms2_pattern must be a non-empty 1D array")
     if np.any((pattern != 0) & (pattern != 1)):
         raise ValueError("ms2_pattern entries must be 0 or 1")
 
-    # Age kernel in reverse transcription order: newest ages correspond to 3' bins.
     kernel = np.cumsum(pattern[::-1])
     if normalize and kernel[-1] > 0:
         kernel = kernel / kernel[-1]
     return kernel
+
+
+def kernels_from_cassette_map(cassette_map, n_channels: int, normalize: bool = False) -> np.ndarray:
+    """Build per-channel kernels from a single gene-body cassette map.
+
+    cassette_map values are integers in [0, n_channels], where 0 means no cassette
+    and i means the bin contributes to channel i.
+    """
+    cassette = np.asarray(cassette_map)
+    if cassette.ndim != 1 or cassette.size == 0:
+        raise ValueError("cassette_map must be a non-empty 1D array")
+    if not np.issubdtype(cassette.dtype, np.integer):
+        raise ValueError("cassette_map entries must be integers")
+    if n_channels < 1:
+        raise ValueError("n_channels must be >= 1")
+    if np.any(cassette < 0) or np.any(cassette > n_channels):
+        raise ValueError("cassette_map entries must lie in [0, n_channels]")
+
+    kernels = np.zeros((n_channels, cassette.size), dtype=float)
+    for ch in range(1, n_channels + 1):
+        kernels[ch - 1] = kernel_from_pattern((cassette == ch).astype(float), normalize=normalize)
+    return kernels
 
 
 def integrate_step_kernel(kernel: np.ndarray, delta_t: float, t1: float, t2: float) -> float:
